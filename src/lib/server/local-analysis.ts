@@ -7,6 +7,7 @@ import { cpus } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { z } from "zod";
+import { localProcessFailureSummary, shouldRetryNativeWhisperFailure } from "@/lib/ai/local-process-recovery";
 import { groupTimedWords, parseWhisperWordSegments } from "@/lib/ai/local-transcript";
 import { whisperBinaryCandidates, whisperModelCandidates } from "@/lib/ai/local-runtime-paths";
 import { SingleFlightCache } from "@/lib/ai/single-flight";
@@ -56,7 +57,7 @@ async function mediaDuration(inputPath: string) {
       "-show_entries", "format=duration",
       "-of", "default=noprint_wrappers=1:nokey=1",
       inputPath
-    ], { timeout: 60_000, maxBuffer: 1024 * 1024 });
+    ], { cwd: WORK_DIR, timeout: 60_000, maxBuffer: 1024 * 1024 });
     const duration = Number(stdout.trim());
     if (!Number.isFinite(duration) || duration <= 0) throw new Error("MEDIA_DURATION_INVALID");
     return duration;
@@ -83,14 +84,20 @@ async function analyzeLocalMediaFile(
         "-i", inputPath,
         "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le",
         audioPath
-      ], { timeout: LOCAL_ANALYSIS_TIMEOUT_MS, maxBuffer: 4 * 1024 * 1024 });
+      ], { cwd: WORK_DIR, timeout: LOCAL_ANALYSIS_TIMEOUT_MS, maxBuffer: 4 * 1024 * 1024 });
     } catch {
       throw new Error("LOCAL_AUDIO_PREPARATION_FAILED");
     }
     report("audio", "complete", "Audio prepared locally · mono 16 kHz");
 
     const runtimePathOptions = {
-      cwd: process.cwd(),
+      cwd: (() => {
+        try {
+          return process.cwd();
+        } catch {
+          return WORK_DIR;
+        }
+      })(),
       home: process.env.HOME || "",
       pathValue: process.env.PATH,
       platform: process.platform,
@@ -109,21 +116,37 @@ async function analyzeLocalMediaFile(
     const threadCount = Math.max(4, Math.min(8, cpus().length - 2));
 
     report("transcription", "active", "Transcribing Arabic speech locally with word timing");
-    try {
-      await execFileAsync(whisperBinary, [
-        "-m", whisperModel,
-        "-f", audioPath,
-        "-l", "ar",
-        "-ojf",
-        "-of", outputBase,
-        "-np",
-        "-sow",
-        "-ml", "1",
-        "-t", String(threadCount),
-        "--prompt", "Arabic creator speech with English product names and technical terms such as design system."
-      ], { timeout: LOCAL_ANALYSIS_TIMEOUT_MS, maxBuffer: 4 * 1024 * 1024 });
-    } catch {
-      throw new Error("LOCAL_TRANSCRIPTION_FAILED");
+    const whisperArguments = [
+      "-m", whisperModel,
+      "-f", audioPath,
+      "-l", "ar",
+      "-ojf",
+      "-of", outputBase,
+      "-np",
+      "-sow",
+      "-ml", "1",
+      "-t", String(threadCount),
+      "--prompt", "Arabic creator speech with English product names and technical terms such as design system."
+    ];
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        // The packaged app can be replaced while an older instance is open. A
+        // stable writable cwd keeps ggml's backend discovery away from a stale
+        // app-bundle directory and prevents std::filesystem::current_path aborts.
+        await execFileAsync(whisperBinary, whisperArguments, {
+          cwd: WORK_DIR,
+          timeout: LOCAL_ANALYSIS_TIMEOUT_MS,
+          maxBuffer: 4 * 1024 * 1024
+        });
+        break;
+      } catch (error) {
+        const canRetry = attempt === 1 && shouldRetryNativeWhisperFailure(error);
+        console.error(`[local-analysis] whisper process failed attempt=${attempt} ${localProcessFailureSummary(error)} retry=${canRetry}`);
+        await rm(outputPath, { force: true }).catch(() => undefined);
+        if (!canRetry) throw new Error("LOCAL_TRANSCRIPTION_FAILED");
+        report("transcription", "active", "The local speech engine restarted after an interruption · retrying safely");
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
     }
 
     const whisperOutput = whisperOutputSchema.parse(JSON.parse(await readFile(outputPath, "utf8")));

@@ -1,5 +1,5 @@
 ---
-version: "0.2.26"
+version: "0.2.27"
 name: "Descriptor"
 description: "A calm, native-feeling desktop editor for transcript-led vertical video, captions, media, and timeline editing."
 colors:
@@ -594,6 +594,7 @@ Use short, direct creator language: `Split`, `Fit`, `Apply to all scenes`, `Gene
 
 ## Migration Notes
 
+- `0.2.27` makes packaged local transcription recover from a native whisper.cpp interruption: every local-analysis subprocess starts from Descriptor's stable private work directory instead of inheriting a replaceable app-bundle directory, one native crash receives one bounded retry, and the persistent transcription stage reports that recovery without losing or replacing the selected source.
 - `0.2.26` makes the public source distribution portable: unlicensed and demo caption fonts are replaced by SIL Open Font License families with their license files, the creator-outline preset maps to Archivo Black, and local speech/runtime paths become environment-configurable with standard project, user-data, cache, PATH, and Homebrew discovery.
 - `0.2.25` makes local transcription single-flight: identical source requests join one job, recent validated results are reused, different active media waits and retries automatically, and a newer import prevents stale progress or results from replacing the current transcript.
 - `0.2.24` removes the cloud transcription adapter, SDK dependency, credential bridge, encrypted key file, setup UI, provider fallback, and secret-bearing environment flow. Speech timing now runs through bundled whisper.cpp with a user-controlled local large-v3 model; Qwen3 performs local translation and cleanup review without owning canonical Arabic wording or timing. Missing local runtimes preserve the selected video and expose `Retry local analysis`.
