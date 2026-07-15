@@ -1,0 +1,32 @@
+{
+  "name": "descriptor-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Desktop host for the local-first Descriptor video editor",
+  "main": "main.cjs",
+  "author": "Alhasan Aldasooqi",
+  "build": {
+    "appId": "com.alhasan.descripter",
+    "productName": "Descriptor",
+    "electronVersion": "43.1.0",
+    "asar": true,
+    "npmRebuild": false,
+    "files": [
+      "main.cjs",
+      "package.json",
+      "product-identity.cjs"
+    ],
+    "extraResources": [
+      {
+        "from": "../.next/standalone",
+        "to": "app-server",
+        "filter": ["**/*"]
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.video",
+      "icon": "assets/Descriptor.icns",
+      "identity": null
+    }
+  }
+}

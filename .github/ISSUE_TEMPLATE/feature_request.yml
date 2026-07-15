@@ -1,0 +1,34 @@
+name: Feature request
+description: Propose a creator workflow improvement.
+title: "[Feature]: "
+labels: [enhancement, needs-triage]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Creator problem
+      description: Describe the job or frustration before proposing UI or technology.
+    validations:
+      required: true
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Desired workflow
+      description: What should happen from the user's point of view?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Product boundaries
+      options:
+        - label: This proposal preserves immutable source media or explains why the product contract must change.
+          required: true
+        - label: This proposal preserves local-first privacy or clearly identifies a new consent/security boundary.
+          required: true
+        - label: This proposal does not assume that a language model may own transcript timing.
+          required: true

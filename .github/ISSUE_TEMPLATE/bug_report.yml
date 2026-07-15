@@ -1,0 +1,70 @@
+name: Bug report
+description: Report a reproducible Descriptor problem without sharing private media or transcripts.
+title: "[Bug]: "
+labels: [bug, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. Search existing issues first. For security problems, use a private security advisory instead.
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Release tag or full commit SHA.
+    validations:
+      required: true
+  - type: dropdown
+    id: architecture
+    attributes:
+      label: Mac architecture
+      options:
+        - Apple Silicon
+        - Intel
+        - Unknown
+    validations:
+      required: true
+  - type: textarea
+    id: setup
+    attributes:
+      label: Local runtime setup
+      description: macOS, Node, whisper.cpp commit/version, Whisper model, Ollama version, and model tag. Do not include local paths or secrets.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Use synthetic or authorized media and the smallest possible example.
+      placeholder: |
+        1. Import…
+        2. Select…
+        3. Observe…
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted evidence
+      description: Add screenshots, timings, or minimal logs only after removing transcript text, faces, voices, usernames, and local paths.
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I have not included credentials, private media, personal transcript content, model files, or sensitive local paths.
+          required: true
+        - label: I reproduced this on the latest default branch or latest pre-release.
+          required: true
